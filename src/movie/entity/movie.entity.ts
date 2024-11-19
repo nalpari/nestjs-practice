@@ -27,6 +27,8 @@ export class Movie extends BaseTable {
   @JoinColumn()
   detail: MovieDetail;
 
-  @OneToMany(() => Director, (director) => director.id)
+  @OneToMany(() => Director, (director) => director.id, {
+    cascade: true,
+  })
   director: Director;
 }
