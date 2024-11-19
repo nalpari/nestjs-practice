@@ -1,10 +1,11 @@
 import { Injectable, Inject, NotFoundException } from '@nestjs/common';
-import { DeleteResult, Repository } from 'typeorm';
+import { DeleteResult, In, Repository } from 'typeorm';
 import { Movie } from './entity/movie.entity';
 import { MovieDetail } from './entity/movie-detail.entity';
 import { CreateMovieDto } from './dto/create-movie.dto';
 import { UpdateMovieDto } from './dto/update-movie.dto';
 import { Director } from 'src/director/entity/director.entity';
+import { Genre } from 'src/genre/entity/genre.entity';
 
 @Injectable()
 export class MovieService {
@@ -15,21 +16,37 @@ export class MovieService {
     private movieDetailRepository: Repository<MovieDetail>,
     @Inject('DIRECTOR_REPOSITORY')
     private directorRepository: Repository<Director>,
+    @Inject('GENRE_REPOSITORY')
+    private genreRepository: Repository<Genre>,
   ) {}
 
+  /**
+   * 모든 영화 조회
+   * @returns {Promise<Movie[]>} 모든 영화
+   */
   async findAll(): Promise<Movie[]> {
     return await this.movieRepository.find({
-      relations: ['detail', 'director'],
+      relations: ['detail', 'director', 'genres'],
     });
   }
 
+  /**
+   * 영화 단일 조회
+   * @param {number} id - 영화 id
+   * @returns {Promise<Movie>} 영화
+   */
   async findOne(id: number): Promise<Movie> {
     return await this.movieRepository.findOne({
       where: { id },
-      relations: ['detail', 'director'],
+      relations: ['detail', 'director', 'genres'],
     });
   }
 
+  /**
+   * 영화 생성
+   * @param {CreateMovieDto} movie - 영화 생성 정보
+   * @returns {Promise<Movie>} 생성된 영화
+   */
   async create(movie: CreateMovieDto): Promise<Movie> {
     // const detail = await this.movieDetailRepository.save({
     //   detail: movie.detail,
@@ -45,9 +62,19 @@ export class MovieService {
       throw new NotFoundException('존재하지 않는 감독입니다.');
     }
 
+    const genres = await this.genreRepository.find({
+      where: {
+        id: In(movie.genreIds),
+      },
+    });
+
+    if (genres.length !== movie.genreIds.length) {
+      throw new NotFoundException('존재하지 않는 장르가 있습니다.');
+    }
+
     return await this.movieRepository.save({
       title: movie.title,
-      genre: movie.genre,
+      genres,
       detail: {
         detail: movie.detail,
       },
@@ -55,6 +82,12 @@ export class MovieService {
     });
   }
 
+  /**
+   * 영화 수정
+   * @param {number} id - 영화 id
+   * @param {UpdateMovieDto} movie - 영화 수정 정보
+   * @returns {Promise<Movie>} 수정된 영화
+   */
   async update(id: number, movie: UpdateMovieDto): Promise<Movie> {
     const selectMovie = await this.movieRepository.findOne({
       where: {
@@ -102,10 +135,15 @@ export class MovieService {
       where: {
         id,
       },
-      relations: ['detail', 'director'],
+      relations: ['detail', 'director', 'genres'],
     });
   }
 
+  /**
+   * 영화 삭제
+   * @param {number} id - 영화 id
+   * @returns {Promise<DeleteResult>} 삭제된 영화
+   */
   async delete(id: number): Promise<DeleteResult> {
     const selectMovie = await this.movieRepository.findOne({
       where: {

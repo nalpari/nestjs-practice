@@ -1,6 +1,6 @@
 export class CreateMovieDto {
   title: string;
-  genre: string;
+  genreIds: number[];
   detail: string;
   directorId: number;
 }
