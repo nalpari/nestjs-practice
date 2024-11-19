@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { CreateGenreDto } from './dto/create-genre.dto';
 import { UpdateGenreDto } from './dto/update-genre.dto';
 import { Repository } from 'typeorm';
@@ -11,23 +11,45 @@ export class GenreService {
     private genreRepository: Repository<Genre>,
   ) {}
 
-  create(createGenreDto: CreateGenreDto) {
-    return this.genreRepository.save(createGenreDto);
+  async create(createGenreDto: CreateGenreDto) {
+    return await this.genreRepository.save(createGenreDto);
   }
 
-  findAll() {
-    return this.genreRepository.find();
+  async findAll() {
+    return await this.genreRepository.find();
   }
 
-  findOne(id: number) {
-    return this.genreRepository.findOne({ where: { id } });
+  async findOne(id: number) {
+    const genre = await this.genreRepository.findOne({ where: { id } });
+
+    if (!genre) {
+      throw new NotFoundException('장르가 존재하지 않습니다.');
+    }
+
+    return genre;
   }
 
-  update(id: number, updateGenreDto: UpdateGenreDto) {
-    return this.genreRepository.update(id, updateGenreDto);
+  async update(id: number, updateGenreDto: UpdateGenreDto) {
+    const genre = await this.findOne(id);
+
+    if (!genre) {
+      throw new NotFoundException('장르가 존재하지 않습니다.');
+    }
+
+    await this.genreRepository.update(id, updateGenreDto);
+
+    return await this.findOne(id);
   }
 
-  remove(id: number) {
-    return this.genreRepository.delete(id);
+  async remove(id: number) {
+    const genre = await this.findOne(id);
+
+    if (!genre) {
+      throw new NotFoundException('장르가 존재하지 않습니다.');
+    }
+
+    await this.genreRepository.delete(id);
+
+    return id;
   }
 }
